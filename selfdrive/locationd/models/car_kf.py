@@ -7,7 +7,7 @@ import numpy as np
 
 from selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
 from selfdrive.locationd.models.constants import ObservationKind
-from selfdrive.swaglog import cloudlog
+from system.swaglog import cloudlog
 
 from rednose.helpers.kalmanfilter import KalmanFilter
 
@@ -15,7 +15,7 @@ if __name__ == '__main__':  # Generating sympy
   import sympy as sp
   from rednose.helpers.ekf_sym import gen_code
 else:
-  from rednose.helpers.ekf_sym_pyx import EKF_sym  # pylint: disable=no-name-in-module, import-error
+  from rednose.helpers.ekf_sym_pyx import EKF_sym_pyx  # pylint: disable=no-name-in-module, import-error
 
 
 i = 0
@@ -71,11 +71,11 @@ class CarKalman(KalmanFilter):
   P_initial = Q.copy()
 
   obs_noise: Dict[int, Any] = {
-    ObservationKind.STEER_ANGLE: np.atleast_2d(math.radians(0.01)**2),
+    ObservationKind.STEER_ANGLE: np.atleast_2d(math.radians(0.05)**2),
     ObservationKind.ANGLE_OFFSET_FAST: np.atleast_2d(math.radians(10.0)**2),
     ObservationKind.ROAD_ROLL: np.atleast_2d(math.radians(1.0)**2),
     ObservationKind.STEER_RATIO: np.atleast_2d(5.0**2),
-    ObservationKind.STIFFNESS: np.atleast_2d(5.0**2),
+    ObservationKind.STIFFNESS: np.atleast_2d(0.5**2),
     ObservationKind.ROAD_FRAME_X_SPEED: np.atleast_2d(0.1**2),
   }
 
@@ -106,9 +106,9 @@ class CarKalman(KalmanFilter):
     state = sp.Matrix(state_sym)
 
     # Vehicle model constants
-    x = state[States.STIFFNESS, :][0, 0]
+    sf = state[States.STIFFNESS, :][0, 0]
 
-    cF, cR = x * cF_orig, x * cR_orig
+    cF, cR = sf * cF_orig, sf * cR_orig
     angle_offset = state[States.ANGLE_OFFSET, :][0, 0]
     angle_offset_fast = state[States.ANGLE_OFFSET_FAST, :][0, 0]
     theta = state[States.ROAD_ROLL, :][0, 0]
@@ -154,7 +154,7 @@ class CarKalman(KalmanFilter):
       [sp.Matrix([sa]), ObservationKind.STEER_ANGLE, None],
       [sp.Matrix([angle_offset_fast]), ObservationKind.ANGLE_OFFSET_FAST, None],
       [sp.Matrix([sR]), ObservationKind.STEER_RATIO, None],
-      [sp.Matrix([x]), ObservationKind.STIFFNESS, None],
+      [sp.Matrix([sf]), ObservationKind.STIFFNESS, None],
       [sp.Matrix([theta]), ObservationKind.ROAD_ROLL, None],
     ]
 
@@ -171,7 +171,7 @@ class CarKalman(KalmanFilter):
     if P_initial is not None:
       self.P_initial = P_initial
     # init filter
-    self.filter = EKF_sym(generated_dir, self.name, self.Q, self.initial_x, self.P_initial, dim_state, dim_state_err, global_vars=self.global_vars, logger=cloudlog)
+    self.filter = EKF_sym_pyx(generated_dir, self.name, self.Q, self.initial_x, self.P_initial, dim_state, dim_state_err, global_vars=self.global_vars, logger=cloudlog)
 
 
 if __name__ == "__main__":

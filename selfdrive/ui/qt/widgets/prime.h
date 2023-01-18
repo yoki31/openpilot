@@ -7,6 +7,14 @@
 
 #include "selfdrive/ui/qt/widgets/input.h"
 
+enum PrimeType {
+  NONE = 0,
+  MAGENTA = 1,
+  LITE = 2,
+  BLUE = 3,
+  MAGENTA_NEW = 4,
+};
+
 // pairing QR code
 class PairingQRWidget : public QWidget {
   Q_OBJECT
@@ -17,8 +25,10 @@ public:
 
 private:
   QPixmap img;
+  QTimer *timer;
   void updateQrCode(const QString &text);
   void showEvent(QShowEvent *event) override;
+  void hideEvent(QHideEvent *event) override;
 
 private slots:
   void refresh();

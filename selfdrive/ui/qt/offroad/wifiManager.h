@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <QtDBus>
 #include <QTimer>
 
@@ -47,9 +48,9 @@ public:
   void requestScan();
   void forgetConnection(const QString &ssid);
   bool isKnownConnection(const QString &ssid);
-  void activateWifiConnection(const QString &ssid);
+  std::optional<QDBusPendingCall> activateWifiConnection(const QString &ssid);
   NetworkType currentNetworkType();
-  void updateGsmSettings(bool roaming, QString apn);
+  void updateGsmSettings(bool roaming, QString apn, bool metered);
   void connect(const Network &ssid, const QString &password = {}, const QString &username = {});
 
   // Tethering functions
@@ -97,4 +98,5 @@ private slots:
   void connectionRemoved(const QDBusObjectPath &path);
   void newConnection(const QDBusObjectPath &path);
   void refreshFinished(QDBusPendingCallWatcher *call);
+  void tetheringActivated(QDBusPendingCallWatcher *call);
 };
